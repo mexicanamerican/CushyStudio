@@ -11,6 +11,7 @@ import { Button_InstallCustomNodeUI } from './Button_InstallCustomNodeUI'
 
 export const InstallRequirementsBtnUI = observer(function InstallRequirementsBtnUI_(p: {
     active: boolean
+    label?: string
     requirements: Requirements[]
 }) {
     const st = useSt()
@@ -23,11 +24,11 @@ export const InstallRequirementsBtnUI = observer(function InstallRequirementsBtn
                     p.active && !st.mainHost.matchRequirements(rr) //
                         ? 'btn-error animate-pulse'
                         : 'btn-ghost opacity-50',
-                    'btn btn-square btn-xs',
+                    p.label ? 'btn btn-sm btn-outline' : 'btn btn-square btn-xs',
                 ]}
             >
                 <span className='material-symbols-outlined'>scatter_plot</span>
-                {}
+                {p.label}
             </div>
             <div tw='[max-width:500px]'>
                 <Panel_InstallRequirementsUI requirements={rr} />
@@ -86,13 +87,7 @@ export const Panel_InstallRequirementsUI = observer(function Panel_InstallRequir
                     const plugins: PluginInfo[] = repo.plugins_byNodeNameInCushy.get(req.nodeName) ?? []
                     if (plugins.length == 0) return <MessageErrorUI markdown={`node plugin **${req.nodeName}** not found`} />
                     if (plugins.length === 1)
-                        return (
-                            <Button_InstallCustomNodeUI
-                                optional={req.optional ?? false}
-                                plugin={plugins[0]}
-                                reason='...' /* status='unknown' */
-                            />
-                        )
+                        return <Button_InstallCustomNodeUI optional={req.optional ?? false} plugin={plugins[0]} />
                     return (
                         <div tw='bd'>
                             <MessageErrorUI>
@@ -102,14 +97,7 @@ export const Panel_InstallRequirementsUI = observer(function Panel_InstallRequir
                                 </div>
                             </MessageErrorUI>
                             {plugins.map((x) => {
-                                return (
-                                    <Button_InstallCustomNodeUI
-                                        optional={req.optional ?? false}
-                                        key={x.title}
-                                        plugin={x}
-                                        reason='...' /* status='unknown' */
-                                    />
-                                )
+                                return <Button_InstallCustomNodeUI optional={req.optional ?? false} key={x.title} plugin={x} />
                             })}
                         </div>
                     )
@@ -121,13 +109,7 @@ export const Panel_InstallRequirementsUI = observer(function Panel_InstallRequir
                         console.log(`[❌] no plugin found with title "${req.title}"`)
                         return <MessageErrorUI markdown={`no plugin found with title **${req.title}** not found`} />
                     }
-                    return (
-                        <Button_InstallCustomNodeUI
-                            optional={req.optional ?? false}
-                            plugin={plugin}
-                            reason='...' /* status='unknown' */
-                        />
-                    )
+                    return <Button_InstallCustomNodeUI optional={req.optional ?? false} plugin={plugin} />
                 }
 
                 // ------------------------------------------------
@@ -137,13 +119,7 @@ export const Panel_InstallRequirementsUI = observer(function Panel_InstallRequir
                         console.log(`[❌] no plugin found with uri "${req.uri}"`)
                         return <MessageErrorUI markdown={`no plugin found with URI **${req.uri}** not found`} />
                     }
-                    return (
-                        <Button_InstallCustomNodeUI
-                            optional={req.optional ?? false}
-                            plugin={plugin}
-                            reason='...' /* status='unknown' */
-                        />
-                    )
+                    return <Button_InstallCustomNodeUI optional={req.optional ?? false} plugin={plugin} />
                 }
 
                 // ------------------------------------------------

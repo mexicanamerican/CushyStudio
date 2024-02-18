@@ -5,7 +5,7 @@ import type { IWidget, WidgetConfigFields, WidgetSerialFields, WidgetTypeHelpers
 
 import { makeAutoObservable } from 'mobx'
 import { nanoid } from 'nanoid'
-import { extractDefaultValue } from '../../EnumDefault'
+import { _extractDefaultValue } from './_extractDefaultValue'
 import { WidgetDI } from '../WidgetUI.DI'
 import { hash } from 'ohash'
 
@@ -39,27 +39,29 @@ export class Widget_enum<O> implements IWidget<Widget_enum_types<O>> {
     readonly id: string
     readonly type: 'enum' = 'enum'
 
-    get serialHash () { return hash(this.result) } // prettier-ignore
+    get isChanged() { return this.serial.val !== this.config.default } // prettier-ignore
+    reset = () => { this.serial.val = this.defaultValue } // prettier-ignore
+    get serialHash () { return hash(this.value) } // prettier-ignore
     get possibleValues(): EnumValue[] {
-        return this.form.schema.knownEnumsByName.get(this.config.enumName as any)?.values ?? []
+        return cushy.schema.knownEnumsByName.get(this.config.enumName as any)?.values ?? []
     }
 
     serial: Widget_enum_serial<O>
-
+    get defaultValue() { return this.config.default ?? this.possibleValues[0] as any } // prettier-ignore
     constructor(public form: FormBuilder, public config: Widget_enum_config<O>, serial?: Widget_enum_serial<O>) {
         this.id = serial?.id ?? nanoid()
         this.serial = serial ?? {
             type: 'enum',
             id: this.id,
             active: true,
-            val: extractDefaultValue(config) ?? (this.possibleValues[0] as any),
+            val: _extractDefaultValue(config) ?? (this.possibleValues[0] as any),
         }
         makeAutoObservable(this)
     }
     get status(): CleanedEnumResult<any> {
-        return this.form.schema.st.fixEnumValue(this.serial.val as any, this.config.enumName)
+        return cushy.fixEnumValue(this.serial.val as any, this.config.enumName)
     }
-    get result(): Widget_enum_output<O> {
+    get value(): Widget_enum_output<O> {
         return this.status.finalValue
     }
 }

@@ -12,8 +12,10 @@ import { KonvaEventObject } from 'konva/lib/Node'
 import { Stage } from 'konva/lib/Stage'
 import { Rect } from 'konva/lib/shapes/Rect'
 import { Transformer } from 'konva/lib/shapes/Transformer'
-import { makeAutoObservable } from 'mobx'
+import { makeAutoObservable, reaction } from 'mobx'
 import { MediaImageL } from 'src/models/MediaImage'
+import { toast } from 'react-toastify'
+import { bang } from 'src/utils/misc/bang'
 
 export class UnifiedSelection {
     id: string = nanoid()
@@ -21,6 +23,13 @@ export class UnifiedSelection {
 
     get isActive(): boolean {
         return this.canvas.activeSelection === this
+    }
+
+    remove = () => {
+        if (this.canvas.selections.length === 1) return toast.error(`Can't delete the last selection`)
+        this.layer.destroy()
+        if (this.isActive) this.canvas.activeSelection = bang(this.canvas.selections.find((s) => s !== this))
+        this.canvas.selections = this.canvas.selections.filter((s) => s !== this)
     }
 
     get x() { return this.stableData.x } // prettier-ignore
@@ -58,17 +67,20 @@ export class UnifiedSelection {
             strokeWidth: 4,
             ...this.stableData,
         })
+
         this.live = new Rect({
             opacity: 0.2,
+            stroke: 'red',
             strokeWidth: 4,
-            draggable: true,
+            // draggable: true,
             ...this.liveData,
             // fill={'blue'}
         })
-        this.live.on('dragend', this.onDragEnd)
-        this.live.on('transformend', this.onTransformEnd)
-        this.live.on('dragmove', this.onDragMove)
-        this.live.on('transform', this.onTransform)
+        this.live.on('dragend', this.applyStableData)
+        this.live.on('transformend', this.applyStableData)
+        //
+        this.live.on('dragmove', this.onLiveDragMove)
+        this.live.on('transform', this.onLiveTransform)
         this.transform = new Transformer({
             rotateEnabled: false,
             flipEnabled: false,
@@ -209,19 +221,17 @@ export class UnifiedSelection {
     //     // console.log(dataURL)
     // }
 
-    onDragEnd = (e: KonvaEventObject<MouseEvent>) => {
+    applyStableData = (e?: KonvaEventObject<MouseEvent>) => {
         Object.assign(this.liveData, this.stableData)
         this.live.setAttrs({ ...this.stableData })
+        this.stable.setAttrs({ ...this.stableData })
         this.stable.getStage()!.batchDraw()
     }
-    onTransformEnd = (e: KonvaEventObject<MouseEvent>) => {
-        Object.assign(this.liveData, this.stableData)
-        this.live.setAttrs({ ...this.stableData })
-        this.stable.getStage()!.batchDraw()
-    }
-    onDragMove = (e: KonvaEventObject<MouseEvent>) => {
+
+    onLiveDragMove = (e?: KonvaEventObject<MouseEvent>) => {
+        if (this.canvas.tool !== 'generate') return
         const { stable, live } = this
-        console.log(`[👙] onDragMove`, stable)
+        // console.log(`[👙] onDragMove`, stable)
         const xx = Math.round(live.x()! / 64) * 64
         const yy = Math.round(live.y()! / 64) * 64
         this.stableData.x = xx
@@ -231,17 +241,18 @@ export class UnifiedSelection {
         // e.target.getStage()!.batchDraw()
         stable.getStage()!.batchDraw()
     }
-    onTransform = (e: KonvaEventObject<MouseEvent>) => {
+    onLiveTransform = (e?: KonvaEventObject<MouseEvent>) => {
+        if (this.canvas.tool !== 'generate') return
         const { stable, live } = this
         const { snapSize, snapToGrid } = this.canvas
 
         console.log(`[👙] onTransform`, stable)
-        const xx = Math.round(live.x()! / 64) * 64
-        const yy = Math.round(live.y()! / 64) * 64
+        const xx = Math.round(live.x()! / snapSize) * snapSize
+        const yy = Math.round(live.y()! / snapSize) * snapSize
         const scaleX = live.scaleX()
         const scaleY = live.scaleY()
-        const ww = Math.round((live.width() * scaleX) / 64) * 64
-        const hh = Math.round((live.height() * scaleY) / 64) * 64
+        const ww = Math.round((live.width() * scaleX) / snapSize) * snapSize
+        const hh = Math.round((live.height() * scaleY) / snapSize) * snapSize
         console.log(`[👙] WW ${ww} x HH ${hh}`)
         this.stableData.width = ww
         this.stableData.height = hh
